@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
+const crypto = require("crypto");
 
 const userSchema = mongoose.Schema(
   {
@@ -30,14 +31,14 @@ const userSchema = mongoose.Schema(
       enum: ["USER", "ADMIN"],
       default: "USER",
     },
-    // avatar: {
-    //   public_id: {
-    //     type: String,
-    //   },
-    //   secure_url: {
-    //     type: String,
-    //   },
-    // },
+    avatar: {
+      public_id: {
+        type: String,
+      },
+      secure_url: {
+        type: String,
+      },
+    },
 
     forgotPasswordToken: {
       type: String,
@@ -88,6 +89,20 @@ userSchema.methods.validatePassword = async function (passwordInputByUser) {
   });
 
   return isPasswordValid;
+};
+
+userSchema.methods.generatePasswordResetToken = async function () {
+  const user = this;
+
+  const resetToken = crypto.randomBytes(20).toString("hex");
+
+  user.forgotPasswordToken = crypto
+    .createHash("sha256")
+    .update(resetToken)
+    .digest("hex");
+  user.forgotPasswordExpiry = Date.now() + 5 * 60 * 1000; // 5 mins from now
+
+  return resetToken;
 };
 
 const User = mongoose.model("User", userSchema);
